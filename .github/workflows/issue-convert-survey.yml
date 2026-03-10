@@ -30,10 +30,13 @@ jobs:
       - name: Extract inputs
         id: extract
         run: |
-          echo '${{ steps.parse.outputs.data }}' > issue-data.json
-          JSON_URL=$(jq -r '.json_url.text' issue-data.json)
-          CONFIG_SOURCE=$(jq -r '.config_source.text' issue-data.json)
-          CONFIG_FILE=$(jq -r '.config_file.text' issue-data.json)
+          # Write parsed issue form data to a JSON file
+          echo '${{ toJSON(steps.parse.outputs.data) }}' > issue-data.json
+
+          # json_url comes in as a quoted string, so strip outer quotes [1:-1]
+          JSON_URL=$(jq -r '.["json_url"].text[1:-1]' issue-data.json)
+          CONFIG_SOURCE=$(jq -r '.["config_source"].text' issue-data.json)
+          CONFIG_FILE=$(jq -r '.["config_file"].text' issue-data.json)
 
           echo "json_url=$JSON_URL" >> $GITHUB_OUTPUT
           echo "config_source=$CONFIG_SOURCE" >> $GITHUB_OUTPUT
@@ -41,7 +44,12 @@ jobs:
 
       - name: Download survey JSON
         run: |
-          curl -L "${{ steps.extract.outputs.json_url }}" -o survey.json
+          URL="${{ steps.extract.outputs.json_url }}"
+          if [ -z "$URL" ] || [ "$URL" = "null" ] || [ "$URL" = "*No response*" ]; then
+            echo "Error: No valid JSON URL provided in the issue form (got '$URL')." >&2
+            exit 1
+          fi
+          curl -L "$URL" -o survey.json
 
       - name: Prepare config (custom only)
         run: |
