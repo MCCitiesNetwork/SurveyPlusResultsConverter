@@ -1,0 +1,49 @@
+{
+  "name": "State of the Commonwealth (DemocracyCraft)",
+  "exclude_question_ids": [
+    23
+  ],
+  "exclude_question_text_contains": [
+    "in-game name"
+  ],
+  "approval_groups": [
+    {
+      "title": "Executive",
+      "contains": [
+        "President",
+        "Vice President",
+        "Secretary of",
+        "Attorney General "
+      ]
+    },
+    {
+      "title": "House of Representatives",
+      "contains": [
+        "Speaker of the House",
+        "Deputy Speaker of the House",
+        "Representative "
+      ]
+    },
+    {
+      "title": "Senate",
+      "contains": [
+        "President of the Senate",
+        "Deputy President of the Senate",
+        "Senator"
+      ]
+    },
+    {
+      "title": "Mayors",
+      "contains": [
+        "Aventura Mayor",
+        "Oakridge Mayor"
+      ]
+    }
+  ],
+  "option_label_overrides": {
+    "Which Political Party do you primarily affiliate with?": "Party Name",
+    "Which area of the Commonwealth of Redmont do you primarily reside in?": "Area"
+  },
+  "approval_exclude_abstain": true
+}
+

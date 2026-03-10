@@ -1,0 +1,66 @@
+name: Convert Survey JSON
+description: Provides Xenforo BBCode and CSV output for a survey JSON export
+title: "[Convert] "
+labels:
+  - survey-conversion
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Provide the survey JSON URL and either pick a config from `configs/` or paste a custom config JSON.
+
+  - type: input
+    id: json_url
+    attributes:
+      label: Raw survey JSON URL
+      description: Direct link to the JSON file (e.g. Raw Gist, paste.dev raw, etc.)
+      placeholder: https://example.com/path/to/survey.json
+    validations:
+      required: true
+
+  - type: dropdown
+    id: config_source
+    attributes:
+      label: Config source
+      description: Use a predefined config or paste a custom one
+      options:
+        - Use config from configs/ folder
+        - Paste custom config JSON below
+    validations:
+      required: true
+
+  - type: dropdown
+    id: config_file
+    attributes:
+      label: Config file name (when using configs/)
+      description: Choose a friendly config; the maintainer will map this to a file under `configs/`.
+      options:
+        - Default (generic)
+        - Redmont approvals
+        - Other / custom (see notes)
+    validations:
+      required: false
+
+  - type: textarea
+    id: custom_config
+    attributes:
+      label: Custom config JSON
+      description: Full JSON for the converter config (ignored if you picked a config file)
+      render: json
+      placeholder: |
+        {
+          "exclude_question": ["in-game name"],
+          "approval_groups": [
+            {
+              "title": "Executive",
+              "contains": [
+                "President ",
+                "Vice President ",
+                "Secretary of ",
+                "Attorney General "
+              ]
+            }
+          ]
+        }
+    validations:
+      required: false

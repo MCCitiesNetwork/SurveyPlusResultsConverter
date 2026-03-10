@@ -1,0 +1,100 @@
+name: Convert survey JSON
+
+on:
+  workflow_dispatch:
+    inputs:
+      json_url:
+        description: "Raw survey JSON URL"
+        required: true
+        type: string
+      config_source:
+        description: "Config source: configs or custom"
+        required: true
+        type: choice
+        options:
+          - configs
+          - custom
+      config_file:
+        description: "Config file under configs/ (when using configs)"
+        required: false
+        type: string
+        default: "configs/default.json"
+      custom_config:
+        description: "Custom config JSON (ignored if using configs)"
+        required: false
+        type: string
+      issue_number:
+        description: "GitHub issue number (optional, to comment back with results)"
+        required: false
+        type: string
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Show Python version
+        run: python --version
+
+      - name: Download survey JSON
+        run: |
+          curl -L "${{ github.event.inputs.json_url }}" -o survey.json
+
+      - name: Prepare config
+        run: |
+          mkdir -p configs
+          if [ "${{ github.event.inputs.config_source }}" = "configs" ]; then
+            echo "Using named config: ${{ github.event.inputs.config_file }}"
+          else
+            cat << 'EOF' > config.runtime.json
+            ${{ github.event.inputs.custom_config }}
+            EOF
+          fi
+
+      - name: Run converter
+        run: |
+          if [ "${{ github.event.inputs.config_source }}" = "configs" ]; then
+            python convert.py survey.json --config-name="${{ github.event.inputs.config_file }}"
+          else
+            python convert.py survey.json --config=config.runtime.json
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: survey-conversion
+          path: |
+            survey.bbcode.txt
+            survey.csv
+          if-no-files-found: error
+
+      - name: Comment on issue with artifact link
+        if: ${{ github.event.inputs.issue_number != '' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = parseInt(process.env.ISSUE_NUMBER, 10);
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              "The survey conversion workflow has completed.",
+              "",
+              `You can download the BBCode and CSV artifacts from [this workflow run](${runUrl}).`
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body
+            });
+        env:
+          ISSUE_NUMBER: ${{ github.event.inputs.issue_number }}
+
