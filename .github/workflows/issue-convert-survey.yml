@@ -1,0 +1,100 @@
+name: Convert survey JSON from issue
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  from-issue:
+    if: contains(github.event.issue.labels.*.name, 'survey-conversion')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Parse issue body
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue.body || "";
+
+            function getSingleLine(label) {
+              const re = new RegExp(`### ${label}[\\s\\S]*?\\n\\n([^\\n]+)`, "i");
+              const m = body.match(re);
+              return m ? m[1].trim() : "";
+            }
+
+            const jsonUrl = getSingleLine("Raw survey JSON URL");
+            const configSource = getSingleLine("Config source");
+            const configFile = getSingleLine("Configuration File");
+
+            // Try to extract fenced JSON under the custom config section
+            let customConfig = "";
+            {
+              const re = /### Custom Configuration File \(JSON format\)[\s\S]*?```(?:json)?[\r\n]+([\s\S]*?)```/i;
+              const m = body.match(re);
+              if (m) {
+                customConfig = m[1].trim();
+              }
+            }
+
+            core.setOutput("json_url", jsonUrl);
+            core.setOutput("config_source", configSource);
+            core.setOutput("config_file", configFile);
+            core.setOutput("custom_config", customConfig);
+
+      - name: Download survey JSON
+        run: |
+          curl -L "${{ steps.parse.outputs.json_url }}" -o survey.json
+
+      - name: Prepare config (custom only)
+        run: |
+          if [ "${{ steps.parse.outputs.config_source }}" = "Paste custom config JSON below" ]; then
+            cat << 'EOF' > config.runtime.json
+            ${{ steps.parse.outputs.custom_config }}
+            EOF
+          fi
+
+      - name: Run converter
+        run: |
+          if [ "${{ steps.parse.outputs.config_source }}" = "Use config from configs/ folder" ]; then
+            python convert.py survey.json --config-name="${{ steps.parse.outputs.config_file }}"
+          else
+            python convert.py survey.json --config=config.runtime.json
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: survey-conversion
+          path: |
+            survey.bbcode.txt
+            survey.csv
+          if-no-files-found: error
+
+      - name: Comment on issue with artifact link
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = context.payload.issue.number;
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              "The survey conversion workflow has completed.",
+              "",
+              `You can download the BBCode and CSV artifacts from [this workflow run](${runUrl}).`
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body
+            });
+
