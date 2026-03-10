@@ -95,3 +95,8 @@ jobs:
 
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
+      - name: Close issue
+        uses: peter-evans/close-issue@v2
+        with:
+          issue-number: ${{ github.event.issue.number }}
+
