@@ -2,12 +2,21 @@ name: Convert survey JSON from issue
 
 on:
   issues:
-    types: [opened]
+    types:
+      - opened
+      - labeled
 
 jobs:
   from-issue:
-    if: contains(github.event.issue.labels.*.name, 'survey-conversion')
+    # Run when a new issue is opened that already has the survey-conversion label
+    # or when the survey-conversion label is added to an existing issue.
+    if: >
+      (github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'survey-conversion')) ||
+      (github.event.action == 'labeled' && github.event.label.name == 'survey-conversion')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
 
     steps:
       - name: Checkout repo
@@ -18,54 +27,42 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Parse issue body
+      - name: Parse issue form data
         id: parse
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const body = context.payload.issue.body || "";
+        uses: zentered/issue-forms-body-parser@v1.5.1
 
-            function getSingleLine(label) {
-              const re = new RegExp(`### ${label}[\\s\\S]*?\\n\\n([^\\n]+)`, "i");
-              const m = body.match(re);
-              return m ? m[1].trim() : "";
-            }
+      - name: Extract inputs
+        id: extract
+        run: |
+          echo '${{ steps.parse.outputs.data }}' > issue-data.json
+          JSON_URL=$(jq -r '.json_url.text' issue-data.json)
+          CONFIG_SOURCE=$(jq -r '.config_source.text' issue-data.json)
+          CONFIG_FILE=$(jq -r '.config_file.text' issue-data.json)
+          CUSTOM_CONFIG=$(jq -r '.custom_config.text' issue-data.json)
 
-            const jsonUrl = getSingleLine("Raw survey JSON URL");
-            const configSource = getSingleLine("Config source");
-            const configFile = getSingleLine("Configuration File");
-
-            // Try to extract fenced JSON under the custom config section
-            let customConfig = "";
-            {
-              const re = /### Custom Configuration File \(JSON format\)[\s\S]*?```(?:json)?[\r\n]+([\s\S]*?)```/i;
-              const m = body.match(re);
-              if (m) {
-                customConfig = m[1].trim();
-              }
-            }
-
-            core.setOutput("json_url", jsonUrl);
-            core.setOutput("config_source", configSource);
-            core.setOutput("config_file", configFile);
-            core.setOutput("custom_config", customConfig);
+          echo "json_url=$JSON_URL" >> $GITHUB_OUTPUT
+          echo "config_source=$CONFIG_SOURCE" >> $GITHUB_OUTPUT
+          echo "config_file=$CONFIG_FILE" >> $GITHUB_OUTPUT
+          echo "custom_config<<EOF" >> $GITHUB_OUTPUT
+          echo "$CUSTOM_CONFIG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Download survey JSON
         run: |
-          curl -L "${{ steps.parse.outputs.json_url }}" -o survey.json
+          curl -L "${{ steps.extract.outputs.json_url }}" -o survey.json
 
       - name: Prepare config (custom only)
         run: |
-          if [ "${{ steps.parse.outputs.config_source }}" = "Paste custom config JSON below" ]; then
+          if [ "${{ steps.extract.outputs.config_source }}" = "Paste custom config JSON below" ]; then
             cat << 'EOF' > config.runtime.json
-            ${{ steps.parse.outputs.custom_config }}
-            EOF
+${{ steps.extract.outputs.custom_config }}
+EOF
           fi
 
       - name: Run converter
         run: |
-          if [ "${{ steps.parse.outputs.config_source }}" = "Use config from configs/ folder" ]; then
-            python convert.py survey.json --config-name="${{ steps.parse.outputs.config_file }}"
+          if [ "${{ steps.extract.outputs.config_source }}" = "Use config from configs/ folder" ]; then
+            python convert.py survey.json --config-name="${{ steps.extract.outputs.config_file }}"
           else
             python convert.py survey.json --config=config.runtime.json
           fi
@@ -80,21 +77,13 @@ jobs:
           if-no-files-found: error
 
       - name: Comment on issue with artifact link
-        uses: actions/github-script@v7
+        uses: peter-evans/create-or-update-comment@v4
         with:
-          script: |
-            const issueNumber = context.payload.issue.number;
-            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const body = [
-              "The survey conversion workflow has completed.",
-              "",
-              `You can download the BBCode and CSV artifacts from [this workflow run](${runUrl}).`
-            ].join("\n");
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            ## ✅ Survey conversion finished
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              body
-            });
+            You can download the BBCode and CSV artifacts from this workflow run:
+
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
