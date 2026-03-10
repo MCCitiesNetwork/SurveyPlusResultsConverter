@@ -63,13 +63,13 @@ jobs:
 
       - name: Prepare config (custom only)
         run: |
-          if [ "${{ steps.extract.outputs.config_source }}" = "Paste custom config JSON below" ]; then
+          if [ "${{ steps.extract.outputs.config_source }}" = "Use custom config" ]; then
             jq -r '."custom-configuration-file-json-format".text' issue-data.json > config.runtime.json
           fi
 
       - name: Run converter
         run: |
-          if [ "${{ steps.extract.outputs.config_source }}" = "Use config from configs/ folder" ]; then
+          if [ "${{ steps.extract.outputs.config_source }}" = "Use premade config" ]; then
             python convert.py survey.json --config-name="${{ steps.extract.outputs.config_file }}"
           else
             python convert.py survey.json --config=config.runtime.json

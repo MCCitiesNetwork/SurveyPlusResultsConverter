@@ -21,11 +21,11 @@ body:
   - type: dropdown
     id: config_source
     attributes:
-      label: Config source
-      description: Use a predefined config or paste a custom one
+      label: Configuration Source
+      description: Use a premade configuration file or paste a custom one
       options:
-        - Use config from configs/ folder
-        - Paste custom config JSON below
+        - Use premade config
+        - Use custom config
     validations:
       required: true
 
