@@ -13,8 +13,8 @@ body:
     id: json_url
     attributes:
       label: Raw survey JSON URL
-      description: Direct link to the JSON file (e.g. Raw Gist, paste.dev raw, etc.)
-      placeholder: https://example.com/path/to/survey.json
+      description: Direct link to the JSON file (e.g. Raw Gist, Raw paste.dev, etc.)
+      placeholder: https://api.pastes.dev/2LAFIRLm20
     validations:
       required: true
 
@@ -32,19 +32,17 @@ body:
   - type: dropdown
     id: config_file
     attributes:
-      label: Config file name (when using configs/)
-      description: Choose a friendly config; the maintainer will map this to a file under `configs/`.
+      label: Configuration File
+      description: Choose a configuration file (full list available at /configs)`.
       options:
-        - Default (generic)
-        - Redmont approvals
-        - Other / custom (see notes)
+        - State of the Commonwealth (DemocracyCraft)
     validations:
       required: false
 
   - type: textarea
     id: custom_config
     attributes:
-      label: Custom config JSON
+      label: Custom Configuration File (JSON format)
       description: Full JSON for the converter config (ignored if you picked a config file)
       render: json
       placeholder: |
