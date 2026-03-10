@@ -30,8 +30,8 @@ jobs:
       - name: Extract inputs
         id: extract
         run: |
-          # steps.parse.outputs.data is a JSON-encoded string; decode it first
-          echo '${{ steps.parse.outputs.data }}' | jq 'fromjson' > issue-data.json
+          # Write parsed issue form data (already JSON) to a file
+          echo '${{ steps.parse.outputs.data }}' > issue-data.json
 
           # Field IDs from the issue form:
           #  - raw-survey-json-url
