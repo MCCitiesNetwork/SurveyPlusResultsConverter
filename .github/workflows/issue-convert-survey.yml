@@ -3,12 +3,12 @@ name: Convert survey JSON from issue
 on:
   issues:
     types:
-      - labeled
+      - opened
 
 jobs:
   from-issue:
-    # Run when the "convert" label is applied to an issue
-    if: github.event.action == 'labeled' && github.event.label.name == 'convert'
+    # Run when a new issue is opened that already has the "convert" label
+    if: contains(github.event.issue.labels.*.name, 'convert')
     runs-on: ubuntu-latest
     permissions:
       contents: read
