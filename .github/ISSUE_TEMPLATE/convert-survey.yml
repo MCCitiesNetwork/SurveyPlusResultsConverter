@@ -2,7 +2,7 @@ name: Convert Survey JSON
 description: Provides Xenforo BBCode and CSV output for a survey JSON export
 title: "[Convert] "
 labels:
-  - survey-conversion
+  - convert
 body:
   - type: markdown
     attributes:
