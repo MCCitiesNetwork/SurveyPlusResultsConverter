@@ -35,7 +35,7 @@ body:
       label: Configuration File
       description: Choose a configuration file (full list available at /configs)`.
       options:
-        - State of the Commonwealth (DemocracyCraft)
+        - state_of_the_commonwealth.json
     validations:
       required: false
 
