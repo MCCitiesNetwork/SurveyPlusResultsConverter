@@ -33,9 +33,9 @@ jobs:
           # Write parsed issue form data (already JSON) to a file
           echo '${{ steps.parse.outputs.data }}' > issue-data.json
 
-          # Field IDs from the issue form:
+          # Parser keys are slugified field labels (see zentered/issue-forms-body-parser):
           #  - raw-survey-json-url
-          #  - config-source
+          #  - configuration-source
           #  - configuration-file
           #  - custom-configuration-file-json-format
 
@@ -45,7 +45,7 @@ jobs:
           JSON_URL=${JSON_URL#<}
           JSON_URL=${JSON_URL%>}
 
-          CONFIG_SOURCE=$(jq -r '."config-source".text' issue-data.json)
+          CONFIG_SOURCE=$(jq -r '."configuration-source".text' issue-data.json)
           CONFIG_FILE=$(jq -r '."configuration-file".text' issue-data.json)
 
           echo "json_url=$JSON_URL" >> $GITHUB_OUTPUT
