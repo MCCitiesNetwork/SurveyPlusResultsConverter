@@ -333,6 +333,9 @@ def load_config_by_name(name, configs_dir="configs"):
         print(f"Warning: configs directory not found: {configs_dir}", file=sys.stderr)
         return {}
 
+    # Allow selecting by internal "name", by filename (e.g. foo.json), or by stem (foo).
+    stem = os.path.splitext(name)[0] if name.lower().endswith(".json") else name
+
     for root, _, files in os.walk(configs_dir):
         for fname in files:
             if not fname.lower().endswith(".json"):
@@ -343,7 +346,12 @@ def load_config_by_name(name, configs_dir="configs"):
                     data = json.load(f)
             except Exception:
                 continue
-            if data.get("name") == name:
+            file_stem = os.path.splitext(fname)[0]
+            if (
+                data.get("name") == name
+                or fname == name
+                or file_stem == stem
+            ):
                 print(f"Using config file: {path}")
                 return data
 
@@ -353,7 +361,7 @@ def load_config_by_name(name, configs_dir="configs"):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python convert.py <survey.json or URL> [--config=path.json] [--config-name=\"Friendly name\"]")
+        print("Usage: python convert.py <survey.json or URL> [--config=path.json] [--config-name=\"Friendly name or configs/*.json name\"]")
         print("  (always writes both <name>.bbcode.txt and <name>.csv)")
         sys.exit(1)
 
